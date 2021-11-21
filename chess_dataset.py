@@ -40,14 +40,16 @@ class ChessPairDataset(torch.utils.data.Dataset):
 
   def __getitem__(self, idx):
     pos1, pos2, label = self.all_pair[idx]
-    return np.load(pos1), np.load(pos2), label
+    pos1, pos2 = np.load(pos1), np.load(pos2)
+    pos1 = torch.Tensor(pos1).type(torch.float)
+    pos2 = torch.Tensor(pos2).type(torch.float)
+    return pos1, pos2, label
 
 class ChessDataset(torch.utils.data.Dataset):
-  def __init__(self, path, train=True, train_split=0.8, transform):
+  def __init__(self, path, train=True, train_split=0.8):
     if train_split < 0 or train_split > 1:
       raise ValueError("Split must be between 0 and 1")
     self.path = path
-    self.transform = transform
     self.black_pos = os.listdir("{}black/".format(self.path))
     self.white_pos = os.listdir("{}white/".format(self.path))
     # Get the path from project root
@@ -65,6 +67,6 @@ class ChessDataset(torch.utils.data.Dataset):
 
   def __getitem__(self, idx):
     retval = self.dataset[idx]
-    if self.transform:
-      self.transform(retval)
-    return np.load(retval)
+    retval = np.load(retval)
+    retval = torch.Tensor(retval).type(torch.float)
+    return retval

@@ -74,6 +74,5 @@ def get_bit(n: int, k: int) -> int:
   return (n & (1 << (k-1))) >> (k-1)
 
 
-
 if __name__ == "__main__":
   read_games("dataset/CCRL-4040.[1293685].pgn", "dataset/npy/", 100)
