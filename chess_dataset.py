@@ -26,8 +26,8 @@ class ChessPairDataset(torch.utils.data.Dataset):
     self.white_pos = ["{}white/{}".format(self.path, i) for i in self.white_pos]
 
     # Pairwise
-    l1 = [(w, b, np.array([1, 0])) for w in self.white_pos for b in self.black_pos]
-    l2 = [(b, w, np.array([0, 1])) for w in self.white_pos for b in self.black_pos]
+    l1 = [(w, b, np.array([1, 0], dtype=float)) for w in self.white_pos for b in self.black_pos][:10000]
+    l2 = [(b, w, np.array([0, 1], dtype=float)) for w in self.white_pos for b in self.black_pos][:10000]
     self.all_pair = [*l1, *l2] 
 
     # Split train and test set
