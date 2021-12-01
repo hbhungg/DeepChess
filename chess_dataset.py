@@ -26,17 +26,21 @@ class ChessPairDataset(torch.utils.data.Dataset):
     self.white_pos = ["{}white/{}".format(self.path, i) for i in self.white_pos]
 
     # Pairwise
-    l1 = [(w, b, np.array([1, 0], dtype=float)) for w in self.white_pos for b in self.black_pos][:10000]
-    l2 = [(b, w, np.array([0, 1], dtype=float)) for w in self.white_pos for b in self.black_pos][:10000]
-    self.all_pair = [*l1, *l2] 
+    l1 = [(w, b, np.array([1, 0], dtype=float)) for w in self.white_pos for b in self.black_pos][:20000]
+    l2 = [(b, w, np.array([0, 1], dtype=float)) for w in self.white_pos for b in self.black_pos][:20000]
 
     # Split train and test set
     if train is not True:
-      self.all_pair = self.all_pair[int(len(self.all_pair)*train_split)]
+      l1 = l1[int(len(l1)*train_split):]
+      l2 = l2[int(len(l2)*train_split):]
+    else:
+      l1 = l1[:int(len(l1)*train_split)]
+      l2 = l2[:int(len(l2)*train_split)]
+    self.all_pair = [*l1, *l2] 
     self.length = len(self.all_pair)
 
   def __len__(self):
-    return len(self.all_pair)
+    return self.length
 
   def __getitem__(self, idx):
     pos1, pos2, label = self.all_pair[idx]
@@ -44,6 +48,8 @@ class ChessPairDataset(torch.utils.data.Dataset):
     pos1 = torch.Tensor(pos1).type(torch.float)
     pos2 = torch.Tensor(pos2).type(torch.float)
     return pos1, pos2, label
+
+
 
 class ChessDataset(torch.utils.data.Dataset):
   def __init__(self, path, train=True, train_split=0.8):
@@ -55,11 +61,16 @@ class ChessDataset(torch.utils.data.Dataset):
     # Get the path from project root
     self.black_pos = ["{}black/{}".format(self.path, i) for i in self.black_pos]
     self.white_pos = ["{}white/{}".format(self.path, i) for i in self.white_pos]
-    self.dataset = [*self.black_pos, *self.white_pos]
 
     # Split train and test set
     if train is not True:
-      self.dataset = self.dataset[int(len(self.dataset)*train_split):]
+      self.black_pos = self.black_pos[int(len(self.black_pos)*train_split):]
+      self.white_pos = self.white_pos[int(len(self.white_pos)*train_split):]
+    else:
+      self.black_pos = self.black_pos[:int(len(self.black_pos)*train_split)]
+      self.white_pos = self.white_pos[:int(len(self.white_pos)*train_split)]
+    self.dataset = [*self.black_pos, *self.white_pos]
+      
     self.length = len(self.dataset)
 
   def __len__(self):
