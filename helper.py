@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 def train_supervise(model, train_data, val_data, epochs, patient):
   loss_f = torch.nn.BCELoss()
-  optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+  optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
   history = []
   curr_patient = patient
   for epoch in range(epochs):
@@ -65,6 +65,7 @@ def train_autoencoder(model, train_data, val_data, epochs, patient):
       optimizer.step()
       t.set_description("Epoch: {} | Loss: {}".format(epoch, loss))
     val_loss = validation_autoencoder(model, val_data)
+    optimizer.param_groups[0]['lr'] *= 0.99
 
     # Early stopping with loss and patient epoch on validation result
     if len(history) > 0:
