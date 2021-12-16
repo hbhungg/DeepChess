@@ -1,4 +1,4 @@
-// chessboard.js v1.0.0
+// chessboard.js v@VERSION
 // https://github.com/oakmac/chessboardjs/
 //
 // Copyright (c) 2019, Chris Oakman
@@ -19,7 +19,7 @@
   var DEFAULT_DRAG_THROTTLE_RATE = 20
   var ELLIPSIS = '…'
   var MINIMUM_JQUERY_VERSION = '1.8.3'
-  var RUN_ASSERTS = false
+  var RUN_ASSERTS = true
   var START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'
   var START_POSITION = fenToObj(START_FEN)
 
@@ -1815,3 +1815,9 @@
   window['Chessboard']['fenToObj'] = fenToObj
   window['Chessboard']['objToFen'] = objToFen
 })() // end anonymous wrapper
+
+/* export Chessboard object if using node or any other CommonJS compatible
+ * environment */
+if (typeof exports !== 'undefined') {
+  exports.Chessboard = window.Chessboard
+}

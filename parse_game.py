@@ -75,4 +75,4 @@ def get_bit(n: int, k: int) -> int:
 
 
 if __name__ == "__main__":
-  read_games("dataset/CCRL-4040.[1293685].pgn", "dataset/npy/", 500)
+  read_games("dataset/CCRL-4040.[1301281].pgn", "dataset/npy/", 500)

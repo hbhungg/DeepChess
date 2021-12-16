@@ -46,7 +46,7 @@ def validation_supervise(model, val_data):
     total += result.shape[0]
     accuracy = correct/total
     loss = loss_f(predict.type(torch.float), result.type(torch.float))
-    t.set_description("Loss: {} | Accuracy: {}".format(loss, accuracy))
+    t.set_description("Validation -> Loss: {} | Accuracy: {}".format(loss, accuracy))
   return loss, accuracy
 
 
@@ -82,5 +82,5 @@ def validation_autoencoder(model, val_data):
   for states in (t := tqdm(val_data)):
     reconstructed = model(states)
     loss = loss_f(reconstructed, states) 
-    t.set_description("Val loss: {}".format(loss))
+    t.set_description("Validation ->  Loss: {}".format(loss))
   return loss
