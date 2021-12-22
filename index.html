@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="stylesheet" href="static/css/chessboard-1.0.0.min.css">
+    <script src="static/js/jquery-3.3.1.min.js"></script>
+    <script src="static/js/chessboard.js"></script>
+  </head>
+  <body>
+    <div id="myBoard" style="width: 500px"></div>
+    <script type="text/javascript">
+
+      function onDragStart (source, piece, position, orientation) {
+        $.get('/move_coordinate', {'piece': piece, 'position': position, 'source': source});
+      }
+
+      var config = {
+        draggable: true,
+        onDragStart: onDragStart,
+        dropOffBoard: "snapback",
+        position: "start"
+      }
+      var myBoard = Chessboard("myBoard", config)
+    </script>
+  </body>
+</html>
