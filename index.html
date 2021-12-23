@@ -7,19 +7,28 @@
   </head>
   <body>
     <div id="myBoard" style="width: 500px"></div>
+    <p></p>
     <script type="text/javascript">
-
-      function onDragStart (source, piece, position, orientation) {
-        $.get('/move_coordinate', {'piece': piece, 'position': position, 'source': source});
-      }
-
       var config = {
         draggable: true,
-        onDragStart: onDragStart,
+        onDrop: onDrop,
         dropOffBoard: "snapback",
         position: "start"
       }
       var myBoard = Chessboard("myBoard", config)
+
+      function onDrop (source, target, piece, newPos, oldPos, orientation) {
+        $.get('/move_coordinate', {'source': source, 'target': target, 'piece': piece},
+          function(response){
+            if (response.includes("game over")) {
+              document.querySelector("p").innerText = "game over";
+            } else {
+              document.querySelector("p").innerText = "";
+              myBoard.position(response);
+            }
+          }
+        );
+      }
     </script>
   </body>
 </html>
