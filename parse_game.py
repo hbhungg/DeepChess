@@ -6,28 +6,27 @@ import random
 
 
 def read_games(pgn_file, save_path, num_games: int = 100):
+  re = {"1-0": "{}white/{}-{}", "0-1": "{}black/{}-{}"}
   pgn = open(pgn_file)
   for i in range(num_games):
+    total = 0
     game = chess.pgn.read_game(pgn)
     if game is None:
       break
     result = game.headers["Result"]
     # Only using game that result in a win
-    if result != "1/2-1/2":
+    if result in re:
       board = game.board()
       for idx, move in enumerate(game.mainline_moves()):
+        is_capture = board.is_capture(move)
+        board.push(move) 
         # Only take after 5 first moves that is not a capture, take randomly 10% of the moves
-        if idx >= 5 and board.is_capture(move) is False and random.random() > 0.9:
-          board.push(move) 
+        if idx >= 5 and is_capture is False and random.random() > 0.9:
+          total += 1
           state = board_state(board)
-          if result == "1-0":
-            with open("{}white/{}-{}".format(save_path, i, idx), "wb") as whitef:
-              np.save(whitef, state)
-          elif result == "0-1":
-            with open("{}black/{}-{}".format(save_path, i, idx), "wb") as blackf:
-              np.save(blackf, state)
-        else:
-          board.push(move)
+          with open(re[result].format(save_path, i, idx), "wb") as f:
+            np.save(f, state)
+    print("Game: {}, took {} board states".format(i, total))
   pgn.close()
 
 
