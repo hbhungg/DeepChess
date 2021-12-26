@@ -6,7 +6,7 @@ import torch
 from torchvision import datasets
 
 class ChessPairDataset(torch.utils.data.Dataset):
-  def __init__(self, path, balance=True, train=True, train_split=0.8):
+  def __init__(self, path, balance=True, train=True, train_split=0.8, portion=1):
     if train_split < 0 or train_split > 1:
       raise ValueError("Split must be between 0 and 1")
     self.path = path
@@ -26,8 +26,12 @@ class ChessPairDataset(torch.utils.data.Dataset):
     self.white_pos = ["{}white/{}".format(self.path, i) for i in self.white_pos]
 
     # Pairwise
-    l1 = [(w, b, np.array([1, 0], dtype=float)) for w in self.white_pos for b in self.black_pos][:50000]
-    l2 = [(b, w, np.array([0, 1], dtype=float)) for w in self.white_pos for b in self.black_pos][:50000]
+    l1 = [(w, b, np.array([1, 0], dtype=float)) for w in self.white_pos for b in self.black_pos]
+    l2 = [(b, w, np.array([0, 1], dtype=float)) for w in self.white_pos for b in self.black_pos]
+
+    # Portion of the full list, since the whole dataset would take too long
+    l1 = l1[:int(len(l1)*portion)]
+    l2 = l2[:int(len(l2)*portion)]
 
     # Split train and test set
     if train is not True:
@@ -37,6 +41,7 @@ class ChessPairDataset(torch.utils.data.Dataset):
       l1 = l1[:int(len(l1)*train_split)]
       l2 = l2[:int(len(l2)*train_split)]
     self.all_pair = [*l1, *l2] 
+
     self.length = len(self.all_pair)
 
   def __len__(self):
