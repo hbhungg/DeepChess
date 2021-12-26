@@ -1,9 +1,9 @@
 import torch
 from tqdm import tqdm
 
-def train_supervise(model, train_data, val_data, epochs, patient):
+def train_supervise(model, train_data, val_data, epochs, patient, lr):
   loss_f = torch.nn.BCELoss()
-  optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+  optimizer = torch.optim.Adam(model.parameters(), lr=lr)
   history = []
   curr_patient = patient
   for epoch in range(epochs):
@@ -19,10 +19,10 @@ def train_supervise(model, train_data, val_data, epochs, patient):
       loss.backward()
       optimizer.step()
       
-      t.set_description("Epoch: {} | Loss: {} | Accuracy: {}".format(epoch, loss, accuracy))
+      t.set_description("Epoch: {} | Loss: {:3f} | Accuracy: {:3f}".format(epoch, loss, accuracy))
     val_loss, _ = validation_supervise(model, val_data)
     # Learning rate multiply by 0.99 after each epochs
-    optimizer.param_groups[0]['lr'] *= 0.99
+    #optimizer.param_groups[0]['lr'] *= 0.99
 
     # Early stopping with loss and patient epoch on validation result
     if len(history) > 0:
@@ -46,16 +46,17 @@ def validation_supervise(model, val_data):
     total += result.shape[0]
     accuracy = correct/total
     loss = loss_f(predict.type(torch.float), result.type(torch.float))
-    t.set_description("Validation -> Loss: {} | Accuracy: {}".format(loss, accuracy))
+    t.set_description("Loss: {:3f} | Accuracy: {:3f}".format(loss, accuracy))
   return loss, accuracy
 
 
 
-def train_autoencoder(model, train_data, val_data, epochs, patient):
-  loss_f = torch.nn.MSELoss()
-  optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+def train_autoencoder(model, train_data, val_data, epochs, patient, lr):
+  loss_f = torch.nn.BCELoss()
+  optimizer = torch.optim.Adam(model.parameters(), lr=lr)
   history = []
   curr_patient = patient
+  print("start")
   for epoch in range(epochs):
     for states in (t := tqdm(train_data)):
       reconstructed = model(states)
@@ -63,9 +64,9 @@ def train_autoencoder(model, train_data, val_data, epochs, patient):
       loss = loss_f(reconstructed, states)
       loss.backward()
       optimizer.step()
-      t.set_description("Epoch: {} | Loss: {}".format(epoch, loss))
+      t.set_description("Epoch: {} | Loss: {:3f}".format(epoch, loss))
     val_loss = validation_autoencoder(model, val_data)
-    optimizer.param_groups[0]['lr'] *= 0.99
+    #optimizer.param_groups[0]['lr'] *= 0.99
 
     # Early stopping with loss and patient epoch on validation result
     if len(history) > 0:
@@ -75,12 +76,13 @@ def train_autoencoder(model, train_data, val_data, epochs, patient):
           print("Early stopping")
           return history
     history.append(val_loss)
+  print("end")
   return history
 
 def validation_autoencoder(model, val_data):
-  loss_f = torch.nn.MSELoss()
+  loss_f = torch.nn.BCELoss()
   for states in (t := tqdm(val_data)):
     reconstructed = model(states)
     loss = loss_f(reconstructed, states) 
-    t.set_description("Validation ->  Loss: {}".format(loss))
+    t.set_description("Loss: {:3f}".format(loss))
   return loss
