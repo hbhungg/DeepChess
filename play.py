@@ -13,7 +13,7 @@ def hello_world():
   return ret.replace("start", board.fen())
 
 @app.route("/move_coordinate", methods=["GET"])
-def get_js_data():
+def move_coordinates():
   source = request.args.get('source', default='')
   piece = request.args.get('piece', default='')
   target = request.args.get('target', default='')
@@ -35,7 +35,12 @@ def get_js_data():
   response = app.response_class(response="game over", status=200)
   return response
 
+@app.route("/new_game")
+def new_game():
+  board.reset()
+  return app.response_class(response=board.fen(), status=200)
+
 if __name__ == "__main__":
   board = chess.Board()
-  app.run(debug=True)
+  app.run(host="0.0.0.0", port="5001")
   

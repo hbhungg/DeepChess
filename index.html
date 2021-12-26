@@ -6,6 +6,7 @@
     <script src="static/js/chessboard.js"></script>
   </head>
   <body>
+    <button onClick="newGame()"> New Game </button><br/>
     <div id="myBoard" style="width: 500px"></div>
     <p></p>
     <script type="text/javascript">
@@ -26,6 +27,15 @@
               document.querySelector("p").innerText = "";
               myBoard.position(response);
             }
+          }
+        );
+      }
+
+      function newGame() {
+        $.get('/new_game', 
+          function(response) {
+            document.querySelector("p").innterText = "";
+            myBoard.position(response);
           }
         );
       }
