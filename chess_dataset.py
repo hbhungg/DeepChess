@@ -1,6 +1,7 @@
 import os 
 import itertools
 import numpy as np
+import random
 
 import torch
 from torchvision import datasets
@@ -41,6 +42,7 @@ class ChessPairDataset(torch.utils.data.Dataset):
       l1 = l1[:int(len(l1)*train_split)]
       l2 = l2[:int(len(l2)*train_split)]
     self.all_pair = [*l1, *l2] 
+    random.shuffle(self.all_pair)
 
     self.length = len(self.all_pair)
 
@@ -75,6 +77,7 @@ class ChessDataset(torch.utils.data.Dataset):
       self.black_pos = self.black_pos[:int(len(self.black_pos)*train_split)]
       self.white_pos = self.white_pos[:int(len(self.white_pos)*train_split)]
     self.dataset = [*self.black_pos, *self.white_pos]
+    #random.shuffle(self.dataset)
       
     self.length = len(self.dataset)
 
