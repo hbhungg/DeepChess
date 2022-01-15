@@ -7,85 +7,65 @@ import torch
 from torchvision import datasets
 
 class ChessPairDataset(torch.utils.data.Dataset):
-  def __init__(self, path, balance=True, train=True, train_split=0.8, portion=1):
-    if train_split < 0 or train_split > 1:
-      raise ValueError("Split must be between 0 and 1")
-    self.path = path
-    self.black_pos = os.listdir(self.path+'black/')
-    self.white_pos = os.listdir(self.path+'white/')
-    
-    # Balance out the 2 datasets
-    if balance is True:
-      diff = abs(len(self.black_pos) - len(self.white_pos))
-      if len(self.black_pos) > len(self.white_pos):
-        self.black_pos = self.black_pos[0:len(self.black_pos) - diff]
-      else:
-        self.white_pos = self.white_pos[0:len(self.white_pos) - diff]
-    
-    # Get the path from project root
-    self.black_pos = ["{}black/{}".format(self.path, i) for i in self.black_pos]
-    self.white_pos = ["{}white/{}".format(self.path, i) for i in self.white_pos]
+  def __init__(self, train=True, train_split=0.8, length=1000000) :
+    games = np.load('./dataset/features.npy')
+    wins = np.load('./dataset/results.npy')
 
-    # Pairwise
-    l1 = [(w, b, np.array([1, 0], dtype=float)) for w in self.white_pos for b in self.black_pos]
-    l2 = [(b, w, np.array([0, 1], dtype=float)) for w in self.white_pos for b in self.black_pos]
+    p = np.random.permutation(len(wins))
+    games = games[p]
+    wins = wins[p]
 
-    # Portion of the full list, since the whole dataset would take too long
-    l1 = l1[:int(len(l1)*portion)]
-    l2 = l2[:int(len(l2)*portion)]
-
-    # Split train and test set
-    if train is not True:
-      l1 = l1[int(len(l1)*train_split):]
-      l2 = l2[int(len(l2)*train_split):]
+    if train is True:
+      train_games = games[:int(len(games)*.8)]
+      train_wins = wins[:int(len(games)*.8)]
+      self.length = int(length * train_split)
     else:
-      l1 = l1[:int(len(l1)*train_split)]
-      l2 = l2[:int(len(l2)*train_split)]
-    self.all_pair = [*l1, *l2] 
-    random.shuffle(self.all_pair)
+      train_games = games[int(len(games)*.8):]
+      train_wins = wins[int(len(games)*.8):]
+      self.length = length - int(length * train_split)
 
-    self.length = len(self.all_pair)
+    self.train_game_wins = train_games[train_wins == 1]
+    self.train_game_losses = train_games[train_wins == 0]
+
+  def __getitem__(self, index):
+    rand_win = self.train_game_wins[
+      np.random.randint(0, self.train_game_wins.shape[0])]
+    rand_loss = self.train_game_losses[
+      np.random.randint(0, self.train_game_losses.shape[0])]
+
+    order = np.random.randint(0,2)
+    if order == 0:
+      stacked = np.hstack((rand_win, rand_loss))
+      stacked = torch.from_numpy(stacked).type(torch.FloatTensor)
+      label = torch.from_numpy(np.array([1, 0])).type(torch.FloatTensor)
+      return (stacked, label)
+    else:
+      stacked = np.hstack((rand_loss, rand_win))
+      stacked = torch.from_numpy(stacked).type(torch.FloatTensor)
+      label = torch.from_numpy(np.array([0, 1])).type(torch.FloatTensor)
+      return (stacked, label)
 
   def __len__(self):
-    return self.length
-
-  def __getitem__(self, idx):
-    pos1, pos2, label = self.all_pair[idx]
-    pos1, pos2 = np.load(pos1), np.load(pos2)
-    pos1 = torch.Tensor(pos1).type(torch.float)
-    pos2 = torch.Tensor(pos2).type(torch.float)
-    return pos1, pos2, label
-
-
+      return self.length
 
 class ChessDataset(torch.utils.data.Dataset):
   def __init__(self, path, train=True, train_split=0.8):
     if train_split < 0 or train_split > 1:
       raise ValueError("Split must be between 0 and 1")
-    self.path = path
-    self.black_pos = os.listdir("{}black/".format(self.path))
-    self.white_pos = os.listdir("{}white/".format(self.path))
-    # Get the path from project root
-    self.black_pos = ["{}black/{}".format(self.path, i) for i in self.black_pos]
-    self.white_pos = ["{}white/{}".format(self.path, i) for i in self.white_pos]
+
+    self.games = np.load(path)
+    np,random.shuffle(self.games)
 
     # Split train and test set
     if train is not True:
-      self.black_pos = self.black_pos[int(len(self.black_pos)*train_split):]
-      self.white_pos = self.white_pos[int(len(self.white_pos)*train_split):]
+      self.games = self.games[int(len(self.games) * train_split):]
     else:
-      self.black_pos = self.black_pos[:int(len(self.black_pos)*train_split)]
-      self.white_pos = self.white_pos[:int(len(self.white_pos)*train_split)]
-    self.dataset = [*self.black_pos, *self.white_pos]
-    #random.shuffle(self.dataset)
+      self.games = self.games[:int(len(self.games) * train_split)]
       
-    self.length = len(self.dataset)
+    self.length = len(self.games)
 
   def __len__(self):
     return self.length
 
   def __getitem__(self, idx):
-    retval = self.dataset[idx]
-    retval = np.load(retval)
-    retval = torch.Tensor(retval).type(torch.float)
-    return retval
+    return torch.from_numpy(self.games[idx]).type(torch.FloatTensor)

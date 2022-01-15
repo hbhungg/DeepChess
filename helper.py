@@ -3,7 +3,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 def train_supervise(model, train_data, val_data, epochs, patient, lr):
-  loss_f = torch.nn.CrossEntropyLoss(label_smoothing=0.3)
+  loss_f = torch.nn.BCELoss(size_average=False)
   optimizer = torch.optim.Adam(model.parameters(), lr=lr)
   history = {"val_loss": [], "train_loss": [], "val_acc": [], "train_acc":[]}
   curr_patient = patient
@@ -11,25 +11,27 @@ def train_supervise(model, train_data, val_data, epochs, patient, lr):
     correct = 0
     total = 0
     running_loss = 0
-    for board1, board2, result in (t := tqdm(train_data)):
-      predict = model(board1, board2)
+    for stack, result in (t := tqdm(train_data)):
+      optimizer.zero_grad()
+
+      predict = model(stack)
       total += result.shape[0]
       correct += sum(1 for x in (torch.argmax(result, 1) == torch.argmax(predict, 1)) if x)
       accuracy = correct/total
-      optimizer.zero_grad()
+
       loss = loss_f(predict.type(torch.float), result.type(torch.float))
       running_loss += loss.item()
       loss.backward()
       optimizer.step()
       
-      t.set_description("Epoch: {} | Loss: {:3f} | Accuracy: {:3f}".format(epoch, loss.item(), accuracy))
+      t.set_description("Epoch: {} | Loss: {:3f} | Accuracy: {:3f}".format(epoch, loss.item()/len(stack), accuracy))
     val_loss, val_acc = validation_supervise(model, val_data)
     # Learning rate multiply by 0.99 after each epochs
     # optimizer.param_groups[0]['lr'] *= 0.99
 
-    history["val_loss"].append(val_loss.item())
+    history["val_loss"].append(val_loss)
     history["val_acc"].append(val_acc)
-    history["train_loss"].append(running_loss/len(train_data))
+    history["train_loss"].append(running_loss/len(train_data.dataset))
     history["train_acc"].append(accuracy)
 
     # Early stopping with on validation result
@@ -44,40 +46,43 @@ def train_supervise(model, train_data, val_data, epochs, patient, lr):
   return history
 
 def validation_supervise(model, val_data):
-  loss_f = torch.nn.CrossEntropyLoss()
+  loss_f = torch.nn.BCELoss(size_average=False)
   correct = 0
   total = 0
-  for board1, board2, result in (t:= tqdm(val_data)):
-    predict = model(board1, board2)
+  running_loss = 0
+  for stack, result in (t:= tqdm(val_data)):
+    predict = model(stack)
     correct += sum(1 for x in (torch.argmax(result, 1) == torch.argmax(predict, 1)) if x)
     total += result.shape[0]
     accuracy = correct/total
     loss = loss_f(predict.type(torch.float), result.type(torch.float))
-    t.set_description("Loss: {:3f} | Accuracy: {:3f}".format(loss, accuracy))
-  return loss, accuracy
+    running_loss += loss.item()
+    t.set_description("Loss: {:3f} | Accuracy: {:3f}".format(loss/len(stack), accuracy))
+  return running_loss, accuracy
 
 
 
 def train_autoencoder(model, train_data, val_data, epochs, patient, lr):
-  loss_f = torch.nn.BCEWithLogitsLoss()
+  loss_f = torch.nn.BCEWithLogitsLoss(size_average=False)
   optimizer = torch.optim.Adam(model.parameters(), lr=lr)
   history = {"val_loss": [], "train_loss": []}
   curr_patient = patient
   for epoch in range(epochs):
     running_loss = 0
     for states in (t := tqdm(train_data)):
-      reconstructed = model(states)
       optimizer.zero_grad()
+
+      reconstructed = model(states)
       loss = loss_f(reconstructed, states)
       loss.backward()
       running_loss += loss.item()
       optimizer.step()
-      t.set_description("Epoch: {} | Loss: {:3f}".format(epoch, loss.item()))
+      t.set_description("Epoch: {} | Loss: {:.3f}".format(epoch, loss.item()/len(states)))
     val_loss = validation_autoencoder(model, val_data)
     optimizer.param_groups[0]['lr'] *= 0.98
 
     # Save training data
-    history["train_loss"].append(running_loss/len(train_data))
+    history["train_loss"].append(running_loss/len(train_data.dataset))
     history["val_loss"].append(val_loss)
 
     # Early stopping with loss and patient epoch on validation result
@@ -90,14 +95,14 @@ def train_autoencoder(model, train_data, val_data, epochs, patient, lr):
   return history
 
 def validation_autoencoder(model, val_data):
-  loss_f = torch.nn.BCEWithLogitsLoss()
+  loss_f = torch.nn.BCEWithLogitsLoss(size_average=False)
   running_loss = 0
   for states in (t := tqdm(val_data)):
     reconstructed = model(states)
     loss = loss_f(reconstructed, states) 
     running_loss += loss.item()
-    t.set_description("Loss: {:3f}".format(loss))
-  return running_loss/len(val_data)
+    t.set_description("Loss: {:3f}".format(loss/len(states)))
+  return running_loss/len(val_data.dataset)
 
 def plot(history):
   # Plot loss
