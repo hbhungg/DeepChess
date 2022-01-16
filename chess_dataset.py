@@ -1,37 +1,35 @@
-import os 
-import itertools
 import numpy as np
-import random
 
 import torch
 from torchvision import datasets
 
-class ChessPairDataset(torch.utils.data.Dataset):
-  def __init__(self, train=True, train_split=0.8, length=1000000) :
-    games = np.load('./dataset/features.npy')
-    wins = np.load('./dataset/results.npy')
 
+class ChessPairDataset(torch.utils.data.Dataset):
+  def __init__(self, features, wins, train=True, train_split=0.8, length=1000000) :
+
+    #TODO: We dont need this right?
     p = np.random.permutation(len(wins))
-    games = games[p]
+    features = features[p]
     wins = wins[p]
 
     if train is True:
-      train_games = games[:int(len(games)*.8)]
-      train_wins = wins[:int(len(games)*.8)]
+      features = features[:int(len(features)*train_split)]
+      wins = wins[:int(len(wins)*train_split)]
       self.length = int(length * train_split)
     else:
-      train_games = games[int(len(games)*.8):]
-      train_wins = wins[int(len(games)*.8):]
-      self.length = length - int(length * train_split)
+      features = features[int(len(features)*train_split):]
+      wins = wins[int(len(wins)*train_split):]
+      self.length = length - int(length*train_split)
+    
+    self.game_wins = features[wins == 1]
+    self.game_losses = features[wins == 0]
 
-    self.train_game_wins = train_games[train_wins == 1]
-    self.train_game_losses = train_games[train_wins == 0]
-
+  #TODO: Might change this so that it is guarantee that sample will not be repeat each call
   def __getitem__(self, index):
-    rand_win = self.train_game_wins[
-      np.random.randint(0, self.train_game_wins.shape[0])]
-    rand_loss = self.train_game_losses[
-      np.random.randint(0, self.train_game_losses.shape[0])]
+    rand_win = self.game_wins[
+      np.random.randint(0, self.game_wins.shape[0])]
+    rand_loss = self.game_losses[
+      np.random.randint(0, self.game_losses.shape[0])]
 
     order = np.random.randint(0,2)
     if order == 0:
@@ -48,24 +46,27 @@ class ChessPairDataset(torch.utils.data.Dataset):
   def __len__(self):
       return self.length
 
+
 class ChessDataset(torch.utils.data.Dataset):
-  def __init__(self, path, train=True, train_split=0.8):
+  def __init__(self, games, train=True, train_split=0.8):
     if train_split < 0 or train_split > 1:
       raise ValueError("Split must be between 0 and 1")
-
-    self.games = np.load(path)
-    np,random.shuffle(self.games)
+    
+    self.games = games
 
     # Split train and test set
     if train is not True:
       self.games = self.games[int(len(self.games) * train_split):]
+      self.p = list(range(0, len(self.games)))
     else:
       self.games = self.games[:int(len(self.games) * train_split)]
-      
+      self.p = list(range(0, len(self.games)))
+
+    np.random.shuffle(self.p)
     self.length = len(self.games)
 
   def __len__(self):
     return self.length
 
   def __getitem__(self, idx):
-    return torch.from_numpy(self.games[idx]).type(torch.FloatTensor)
+    return torch.from_numpy(self.games[self.p[idx]]).type(torch.FloatTensor)
