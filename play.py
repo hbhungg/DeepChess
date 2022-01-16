@@ -29,11 +29,12 @@ def move_coordinates():
         board.push(move)
         print("\n ---Board--- \n{}\n\nStatus: {}\n".format(board, board.outcome()))
         response = app.response_class(response=board.fen(), status=200)
-        return response
-
-  print("GAME OVER")
-  response = app.response_class(response="game over", status=200)
-  return response
+    response = app.response_class(response=board.fen(), status=200)
+    return response
+  else:
+    print("GAME OVER")
+    response = app.response_class(response="game over", status=200)
+    return response
 
 @app.route("/new_game")
 def new_game():
@@ -43,4 +44,4 @@ def new_game():
 if __name__ == "__main__":
   board = chess.Board()
   app.run(host="0.0.0.0", port="5001")
-  
+
