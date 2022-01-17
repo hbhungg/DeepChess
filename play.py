@@ -9,6 +9,7 @@ import torch
 import numpy as np
 from model.autoencoder import Autoencoder
 from model.siamese import Siamese
+from model.deepchess import DeepChess
 from parse_game import get_bitboard
 
 app = Flask(__name__, template_folder=".")
@@ -49,10 +50,7 @@ def move_coordinates():
 def compare_board(board1, board2):
   bboard1 = torch.from_numpy(np.expand_dims(get_bitboard(board1), axis=0)).type(torch.FloatTensor)
   bboard2 = torch.from_numpy(np.expand_dims(get_bitboard(board2), axis=0)).type(torch.FloatTensor)
-  _, f1 = ae(bboard1)
-  _, f2 = ae(bboard2)
-  f = torch.cat((f1, f2), 1)
-  return si(f)[0]
+  return model(bboard1, bboard2)[0]
 
 
 def minimax(board, depth, white, orig_board):
@@ -125,17 +123,11 @@ def new_game():
 if __name__ == "__main__":
   board = chess.Board()
 
-  # Load Autoencoder
   ae = Autoencoder()
-  c = torch.load("./checkpoints/ae_10.pth.tar")
-  ae.load_state_dict(c["state_dict"])
-  ae.eval()
-
-  # Load Siamese
   si = Siamese()
-  d = torch.load("./checkpoints/siamese/lr_0.001_decay_0.99.pth")
-  si.load_state_dict(d["model_state_dict"])
-  si.eval()
-
+  model = DeepChess(ae, si)
+  c = torch.load("./checkpoints/deepchess/lr_0.001_decay_0.99.pt")
+  model.load_state_dict(c["model_state_dict"])
+  model.eval()
   app.run(host="0.0.0.0", port="5001", debug=True)
 

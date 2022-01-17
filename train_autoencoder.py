@@ -67,7 +67,7 @@ def validation(model, val_data, loss_f):
 
 
 def save(model, path, lr, decay, epoch):
-  p = "{}/lr_{}_decay_{}.pth".format(path, lr, decay)
+  p = "{}/lr_{}_decay_{}.pt".format(path, lr, decay)
   torch.save({
               "epoch": epoch,
               "model_state_dict": model.state_dict()
@@ -95,9 +95,9 @@ if __name__ == "__main__":
   decay = 0.95
   save_path="./checkpoints/autoencoder"
   loss_f = torch.nn.BCELoss(size_average=False)
-  resume = True
+  resume = False
   if resume:
-    c = torch.load("./checkpoints/autoencoder/lr_0.005_decay_0.95.pth")
+    c = torch.load("./checkpoints/autoencoder/lr_0.005_decay_0.95.pt")
     model.load_state_dict(c["model_state_dict"])
   his = train(model=model,
               train_data=trainloader,

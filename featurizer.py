@@ -26,7 +26,7 @@ if __name__ == "__main__":
   bdloader = DataLoader(bd, batch_size=128)
 
   model = Autoencoder()
-  c = torch.load("./checkpoints/autoencoder/lr_0.005_decay_0.95.pth")
+  c = torch.load("./checkpoints/autoencoder/lr_0.005_decay_0.95.pt")
   model.load_state_dict(c["model_state_dict"])
   model.eval()
 

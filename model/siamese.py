@@ -19,5 +19,6 @@ class Siamese(torch.nn.Module):
     x = F.leaky_relu(self.bn2(self.fc2(x)))
     x = F.leaky_relu(self.bn3(self.fc3(x)))
     x = self.bn4(self.fc4(x))
+    #return x
     return F.softmax(x, dim=1)
 

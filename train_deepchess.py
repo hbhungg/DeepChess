@@ -2,9 +2,10 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
+from model.deepchess import DeepChess
+from model.autoencoder import Autoencoder
 from model.siamese import Siamese
 from chess_dataset import ChessPairDataset
-
 
 #TODO: Might merge this and the autoencoder training loop, since both of them are roughly similar
 def train(model, train_data, val_data, epochs, loss_f, lr, decay, save_path, patient, delta):
@@ -35,10 +36,10 @@ def train(model, train_data, val_data, epochs, loss_f, lr, decay, save_path, pat
   for epoch in range(epochs):
     correct, total, running_loss = 0, 0, 0
     model.train()
-    for batch_idx, (stack, result) in enumerate(train_data):
+    for batch_idx, (b1, b2, result) in enumerate(train_data):
       optimizer.zero_grad()
 
-      predict = model(stack)
+      predict = model(b1, b2)
       loss = loss_f(predict.type(torch.float), result.type(torch.float))
       loss.backward()
       optimizer.step()
@@ -54,7 +55,7 @@ def train(model, train_data, val_data, epochs, loss_f, lr, decay, save_path, pat
                 batch_idx, 
                 len(train_data), 
                 batch_idx/len(train_data),
-                loss.item()/len(stack), 
+                loss.item()/len(result), 
                 accuracy))
 
     # Validation
@@ -90,8 +91,8 @@ def train(model, train_data, val_data, epochs, loss_f, lr, decay, save_path, pat
 def validation(model, val_data, loss_f):
   correct, total, running_loss = 0, 0, 0
   model.eval()
-  for stack, result in val_data:
-    predict = model(stack)
+  for b1, b2, result in val_data:
+    predict = model(b1, b2)
 
     # Calculate validation statistics
     correct += sum(1 for x in (torch.argmax(result, 1) == torch.argmax(predict, 1)) if x)
@@ -114,10 +115,14 @@ def save(model, path, lr, decay, epoch):
 
 if __name__ == "__main__":
   # Model
-  model = Siamese()
+  ae = Autoencoder()
+  c = torch.load("./checkpoints/autoencoder/lr_0.005_decay_0.95.pt")
+  ae.load_state_dict(c["model_state_dict"])
+  si = Siamese()
+  model = DeepChess(ae, si)
 
   # Dataset
-  features = np.load("./dataset/features.npy", mmap_mode="r")
+  features = np.load("./dataset/bitboards.npy", mmap_mode="r")
   wins = np.load("./dataset/results.npy", mmap_mode="r")
   train_data = ChessPairDataset(features, wins, length=1000000)
   test_data = ChessPairDataset(features, wins, train=False, length=1000000)
@@ -126,14 +131,14 @@ if __name__ == "__main__":
 
   # Train
   print("Start training")
-  epochs = 100
-  lr = 0.1
+  epochs = 50
+  lr = 0.001
   decay = 0.99
-  save_path = "./checkpoints/siamese"
+  save_path = "./checkpoints/deepchess"
   loss_f = torch.nn.BCELoss(size_average=False)
   resume = False
   if resume:
-    c = torch.load("./checkpoints/siamese/lr_0.01_decay_0.99.pt")
+    c = torch.load("./checkpoints/deepchess/lr_0.01_decay_0.99.pt")
     model.load_state_dict(c["model_state_dict"])
   his = train(model=model,
               train_data=trainloader,
@@ -143,7 +148,7 @@ if __name__ == "__main__":
               lr=lr,
               decay=decay,
               patient=3,
-              delta=0,
+              delta=0.001,
               save_path=save_path)
 
   from utils import plot

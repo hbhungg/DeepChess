@@ -8,7 +8,7 @@ import random
 def read_games(pgn_file, save_path, num_games: int = 100):
   games = []
   results = []
-  re = {"1-0": 1, "0-1": 0}
+  re = {"1-0": 1, "0-1": -1}
 
   pgn = open(pgn_file)
   for i in range(num_games):
@@ -58,4 +58,4 @@ def get_bitboard(board):
   return bitboard
 
 if __name__ == "__main__":
-  read_games("dataset/CCRL-4040.[1301281].pgn", "./dataset", 500000)
+  read_games("dataset/CCRL-4040.[1301281].pgn", "./dataset", 300000)

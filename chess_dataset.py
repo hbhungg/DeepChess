@@ -5,12 +5,13 @@ from torchvision import datasets
 
 
 class ChessPairDataset(torch.utils.data.Dataset):
-  def __init__(self, features, wins, train=True, train_split=0.8, length=1000000) :
+  def __init__(self, features, wins, from_feature=False, train=True, train_split=0.8, length=1000000) :
 
     #TODO: We dont need this right?
     p = np.random.permutation(len(wins))
     features = features[p]
     wins = wins[p]
+    self.from_feature = from_feature
 
     if train is True:
       features = features[:int(len(features)*train_split)]
@@ -33,15 +34,28 @@ class ChessPairDataset(torch.utils.data.Dataset):
 
     order = np.random.randint(0,2)
     if order == 0:
-      stacked = np.hstack((rand_win, rand_loss))
-      stacked = torch.from_numpy(stacked).type(torch.FloatTensor)
-      label = torch.from_numpy(np.array([1, 0])).type(torch.FloatTensor)
-      return (stacked, label)
+      if self.from_feature:
+        stacked = np.hstack((rand_win, rand_loss))
+        stacked = torch.from_numpy(stacked).type(torch.FloatTensor)
+        label = torch.from_numpy(np.array([1, 0])).type(torch.FloatTensor)
+        return (stacked, label)
+      else:
+        rand_loss = torch.from_numpy(rand_loss).type(torch.FloatTensor)
+        rand_win = torch.from_numpy(rand_win).type(torch.FloatTensor)
+        label = torch.from_numpy(np.array([1, 0])).type(torch.FloatTensor)
+        return (rand_win, rand_loss, label) 
     else:
-      stacked = np.hstack((rand_loss, rand_win))
-      stacked = torch.from_numpy(stacked).type(torch.FloatTensor)
-      label = torch.from_numpy(np.array([0, 1])).type(torch.FloatTensor)
-      return (stacked, label)
+      if self.from_feature:
+        stacked = np.hstack((rand_loss, rand_win))
+        stacked = torch.from_numpy(stacked).type(torch.FloatTensor)
+        label = torch.from_numpy(np.array([0, 1])).type(torch.FloatTensor)
+        return (stacked, label)
+      else:
+        rand_loss = torch.from_numpy(rand_loss).type(torch.FloatTensor)
+        rand_win = torch.from_numpy(rand_win).type(torch.FloatTensor)
+        label = torch.from_numpy(np.array([0, 1])).type(torch.FloatTensor)
+        return (rand_loss, rand_win, label)
+         
 
   def __len__(self):
       return self.length
@@ -57,16 +71,17 @@ class ChessDataset(torch.utils.data.Dataset):
     # Split train and test set
     if train is not True:
       self.games = self.games[int(len(self.games) * train_split):]
-      self.p = list(range(0, len(self.games)))
+      #self.p = list(range(0, len(self.games)))
     else:
       self.games = self.games[:int(len(self.games) * train_split)]
-      self.p = list(range(0, len(self.games)))
+      #self.p = list(range(0, len(self.games)))
 
-    np.random.shuffle(self.p)
+    #np.random.shuffle(self.p)
     self.length = len(self.games)
 
   def __len__(self):
     return self.length
 
   def __getitem__(self, idx):
-    return torch.from_numpy(self.games[self.p[idx]]).type(torch.FloatTensor)
+    #return torch.from_numpy(self.games[self.p[idx]]).type(torch.FloatTensor)
+    return torch.from_numpy(self.games[idx]).type(torch.FloatTensor)
