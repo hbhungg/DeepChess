@@ -35,7 +35,8 @@ class Autoencoder(torch.nn.Module):
     x = F.leaky_relu(self.bnd1(self.fcd1(x)))
     x = F.leaky_relu(self.bnd2(self.fcd2(x)))
     x = F.leaky_relu(self.bnd3(self.fcd3(x)))
-    return self.bnd4(self.fcd4(x))
+    x = torch.sigmoid(self.bnd4(self.fcd4(x)))
+    return x
 
   def forward(self, x):
     x = self.encode(x)

@@ -22,7 +22,7 @@ class ChessPairDataset(torch.utils.data.Dataset):
       self.length = length - int(length*train_split)
     
     self.game_wins = features[wins == 1]
-    self.game_losses = features[wins == 0]
+    self.game_losses = features[wins == -1]
 
   #TODO: Might change this so that it is guarantee that sample will not be repeat each call
   def __getitem__(self, index):
