@@ -81,17 +81,20 @@ if __name__ == "__main__":
   model = Autoencoder() 
 
   # Dataset
-  games = np.load("./dataset/bitboards.npy", mmap_mode="c")
-  train_data = ChessDataset(games, train_split=0.8)
-  test_data = ChessDataset(games, train=False, train_split=0.8)
+  white_wins = np.load("./dataset/white/white_wins.npy", mmap_mode="c")
+  black_wins = np.load("./dataset/black/black_wins.npy", mmap_mode="c")
+
+  train_data = ChessDataset(white_wins, black_wins, train_split=0.8)
+  test_data = ChessDataset(white_wins, black_wins, train=False, train_split=0.8)
+
   print(len(train_data), len(test_data))
   trainloader = DataLoader(train_data, batch_size=128, shuffle=True) 
   testloader = DataLoader(test_data, batch_size=128, shuffle=False) 
 
   # Train
   print("Start training")
-  epochs = 20
-  lr = 5e-3
+  epochs = 1
+  lr = 5e-4
   decay = 0.95
   save_path="./checkpoints/autoencoder"
   loss_f = torch.nn.BCELoss(size_average=False)

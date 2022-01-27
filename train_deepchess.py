@@ -122,17 +122,19 @@ if __name__ == "__main__":
   model = DeepChess(ae, si)
 
   # Dataset
-  features = np.load("./dataset/bitboards.npy", mmap_mode="r")
-  wins = np.load("./dataset/results.npy", mmap_mode="r")
-  train_data = ChessPairDataset(features, wins, length=1000000)
-  test_data = ChessPairDataset(features, wins, train=False, length=1000000)
+  white_wins = np.load("./dataset/white/white_wins.npy", mmap_mode="c")
+  black_wins = np.load("./dataset/black/black_wins.npy", mmap_mode="c")
+
+  train_data = ChessPairDataset(white_wins, black_wins, False, length=1000000)
+  test_data = ChessPairDataset(white_wins, black_wins, False, train=False, length=1000000)
+
   trainloader = DataLoader(train_data, batch_size=256, shuffle=True)
   testloader = DataLoader(test_data, batch_size=256, shuffle=False)
 
   # Train
   print("Start training")
   epochs = 50
-  lr = 0.001
+  lr = 0.01
   decay = 0.99
   save_path = "./checkpoints/deepchess"
   loss_f = torch.nn.BCELoss(size_average=False)

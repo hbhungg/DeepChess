@@ -6,10 +6,8 @@ from model.siamese import Siamese
 class DeepChess(torch.nn.Module):
   def __init__(self, ae, si):
     super(DeepChess, self).__init__()
-
-    self.ae = Autoencoder()
-
-    self.si = Siamese()
+    self.ae = ae
+    self.si = si
 
   def forward(self, x1, x2):
     x1 = self.ae.encode(x1)

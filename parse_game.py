@@ -6,9 +6,7 @@ import random
 
 
 def read_games(pgn_file, save_path, num_games: int = 100):
-  games = []
-  results = []
-  re = {"1-0": 1, "0-1": -1}
+  re = {"1-0": [], "0-1": []}
 
   pgn = open(pgn_file)
   for i in range(num_games):
@@ -23,20 +21,20 @@ def read_games(pgn_file, save_path, num_games: int = 100):
         is_capture = board.is_capture(move)
         board.push(move) 
         # Only take after 5 first moves that is not a capture
-        # And take randomly
+        # 10% chance of taking the move
         if idx >= 5 and is_capture is False and random.random() > 0.9:
           state = get_bitboard(board)
-          games.append(state)
-          results.append(re[result])
+          re[result].append(state)
 
     # Print every 100 games
     if i % 1000 == 0:
-      print("Game: {}/{} took {} board states".format(i, num_games, len(games)))
+      length = len(re["1-0"]) + len(re["0-1"])
+      print("Game: {}/{} took {} board states".format(i, num_games, length))
 
-  with open("{}/bitboards.npy".format(save_path), "wb") as b, \
-       open("{}/results.npy".format(save_path), "wb") as r:
-    np.save(b, np.array(games))
-    np.save(r, np.array(results))
+  with open("{}/white/white_wins.npy".format(save_path), "wb") as w, \
+       open("{}/black/black_wins.npy".format(save_path), "wb") as b:
+    np.save(w, np.array(re["1-0"]))
+    np.save(b, np.array(re["0-1"]))
 
 
 def get_bitboard(board):
