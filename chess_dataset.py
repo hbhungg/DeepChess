@@ -82,7 +82,7 @@ class ChessDataset(torch.utils.data.Dataset):
   def __getitem__(self, idx):
     # Real index
     idx = self.p[idx]
-    if idx > len(self.white_wins):
+    if idx >= len(self.white_wins):
       idx = idx - len(self.white_wins)
       return torch.from_numpy(self.black_wins[idx]).type(torch.FloatTensor)
     else:
