@@ -7,9 +7,9 @@ import time
 
 import torch
 import numpy as np
-from model.autoencoder import Autoencoder
-from model.siamese import Siamese
-from model.deepchess import DeepChess
+from model import Autoencoder
+from model import Siamese
+from model import DeepChess
 from parse_game import get_bitboard
 
 app = Flask(__name__, template_folder=".")
