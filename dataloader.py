@@ -2,7 +2,7 @@ import sqlite3
 import contextlib
 import numpy as np
 import chess
-from tinygrad import Tensor
+from tinygrad import Tensor, dtypes
 
 def get_bitboard(fen):
   board = chess.Board(fen)
@@ -21,7 +21,7 @@ def get_bitboard(fen):
   bitboard[-4] = int(board.has_queenside_castling_rights(True))
   bitboard[-5] = int(board.has_queenside_castling_rights(False))
 
-  return Tensor(bitboard, requires_grad=False).expand(1, 773)
+  return Tensor(bitboard, requires_grad=False, dtype=dtypes.float32).expand(1, 773)
 
 
 

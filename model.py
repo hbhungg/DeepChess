@@ -3,17 +3,29 @@ from tinygrad import nn, Tensor
 class Autoencoder():
   def __init__(self):
     self.encode_layers = [
-      nn.Linear(773, 600), nn.BatchNorm(600), Tensor.leakyrelu,
-      nn.Linear(600, 400), nn.BatchNorm(400), Tensor.leakyrelu,
-      nn.Linear(400, 200), nn.BatchNorm(200), Tensor.leakyrelu,
-      nn.Linear(200, 100), nn.BatchNorm(100),
+      nn.Linear(773, 600), Tensor.leakyrelu,
+      nn.Linear(600, 400), Tensor.leakyrelu,
+      nn.Linear(400, 200), Tensor.leakyrelu,
+      nn.Linear(200, 100), Tensor.leakyrelu
     ]
     self.decode_layers = [
-      nn.Linear(100, 200), nn.BatchNorm(200), Tensor.leakyrelu,
-      nn.Linear(200, 400), nn.BatchNorm(400), Tensor.leakyrelu,
-      nn.Linear(400, 600), nn.BatchNorm(600), Tensor.leakyrelu,
-      nn.Linear(600, 773), nn.BatchNorm(773),
+      nn.Linear(100, 200), Tensor.leakyrelu,
+      nn.Linear(200, 400), Tensor.leakyrelu,
+      nn.Linear(400, 600), Tensor.leakyrelu,
+      nn.Linear(600, 773), Tensor.sigmoid
     ]
+    # self.encode_layers = [
+    #   nn.Linear(773, 600), nn.BatchNorm(600), Tensor.leakyrelu,
+    #   nn.Linear(600, 400), nn.BatchNorm(400), Tensor.leakyrelu,
+    #   nn.Linear(400, 200), nn.BatchNorm(200), Tensor.leakyrelu,
+    #   nn.Linear(200, 100), nn.BatchNorm(100), Tensor.leakyrelu
+    # ]
+    # self.decode_layers = [
+    #   nn.Linear(100, 200), nn.BatchNorm(200), Tensor.leakyrelu,
+    #   nn.Linear(200, 400), nn.BatchNorm(400), Tensor.leakyrelu,
+    #   nn.Linear(400, 600), nn.BatchNorm(600), Tensor.leakyrelu,
+    #   nn.Linear(600, 773), nn.BatchNorm(773), Tensor.sigmoid
+    # ]
   def encode(self, x: Tensor):
     return x.sequential(self.encode_layers)
   def decode(self, x: Tensor):
