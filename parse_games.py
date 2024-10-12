@@ -43,7 +43,7 @@ def read_games(pgn_file, con, num_games: int = 100, max_board_per_game=5):
 if __name__ == "__main__":
   import sqlite3
 
-  num_games = 10_000
+  num_games = 100_000
   con = sqlite3.connect(f"dataset/dataset_{num_games}.db")
   cur = con.cursor()
   cur.execute("""CREATE TABLE IF NOT EXISTS boards (

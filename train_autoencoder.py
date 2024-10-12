@@ -18,22 +18,41 @@ def train(opt, model, x:Tensor):
 if __name__ == "__main__":
 
   model = Autoencoder()
-  dataset = BoardDataset("./dataset/dataset_10000.db")
+  dataset = BoardDataset("./dataset/dataset_100000.db")
   opt = nn.optim.Adam(nn.state.get_parameters(model), lr=1e-4)
 
   EPOCH = 1
   BATCH_SIZE = 30
-  ls = []
+  train_l, test_l = [], []
+
+  split_idx = int(len(dataset) * 0.8)
 
   for i in range(EPOCH): 
-    for x in range(0, len(dataset), BATCH_SIZE):
+    # Train loop
+    for x in range(0, split_idx, BATCH_SIZE):
       X = dataset[x:x+BATCH_SIZE-1][0]
       if X.shape[0] != BATCH_SIZE: continue # STOOPID
       loss = train(opt, model, X).item()
-      ls.append(loss)
-      print(loss)
+      train_l.append(loss)
+      if x % 1000 == 0:
+        print(loss)
+
+    # Validation loop
+    running_loss = 0
+    for x in range(split_idx, len(dataset), BATCH_SIZE):
+      X = dataset[x:x+BATCH_SIZE-1][0]
+      if X.shape[0] != BATCH_SIZE: continue # STOOPID
+      y = model.forward(X)
+      loss = (y.binary_crossentropy(X, reduction="mean")).numpy()
+      running_loss += loss
+    print("Validation test: ", running_loss/(len(dataset)-split_idx))
+
+  from tinygrad.nn.state import safe_save, safe_load, get_state_dict, load_state_dict
+  state_dict = get_state_dict(model)
+  safe_save(state_dict, "autoencoder_100k.sft")
 
   import matplotlib.pyplot as plt
 
-  plt.plot(ls)
+  plt.plot(train_l)
   plt.show()
+
