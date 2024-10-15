@@ -24,8 +24,8 @@ if __name__ == "__main__":
 
   DATASET_NAME = "dataset_100000"
   EPOCH = 5
-  BATCH_SIZE = 512
-  LR = 1e-4
+  BATCH_SIZE = 256
+  LR = 1e-3
   ADAM_ESP = 1e-6
 
   model = Autoencoder()
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # Train loop
     for epoch in range(EPOCH):
       for idx, x in enumerate(tbar:=tqdm(train_ds, total=len(train_ds))):
-        loss = train(opt, model, x[0]).item()
+        loss = train(opt, model, x).item()
         assert math.isnan(loss) is False
         if idx % 3 == 0:
           mlflow.log_metric(key="train_loss", value=loss, step=epoch*len(train_ds)+idx)
@@ -49,8 +49,8 @@ if __name__ == "__main__":
       # Validation loop
       running_loss = 0
       for x in tqdm(val_ds, total=len(val_ds)):
-        y = model.forward(x[0])
-        loss = (y.binary_crossentropy_logits(x[0], reduction="mean")).numpy()
+        y = model.forward(x)
+        loss = (y.binary_crossentropy_logits(x, reduction="mean")).numpy()
         running_loss += loss
       val_mean_loss = running_loss/len(val_ds)
       print(f"Epoch: {epoch} - Val Loss: {val_mean_loss}")
