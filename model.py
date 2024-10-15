@@ -1,31 +1,27 @@
+import math
 from tinygrad import nn, Tensor
+
+class Linear:
+  def __init__(self, in_features:int, out_features:int, bias=True):
+    self.weight = Tensor.glorot_uniform(out_features, in_features)
+    self.bias = Tensor.glorot_uniform(out_features) if bias else None
+  def __call__(self, x:Tensor) -> Tensor:
+    return x.linear(self.weight.transpose(), self.bias)
 
 class Autoencoder():
   def __init__(self):
     self.encode_layers = [
-      nn.Linear(773, 600), Tensor.leakyrelu,
-      nn.Linear(600, 400), Tensor.leakyrelu,
-      nn.Linear(400, 200), Tensor.leakyrelu,
-      nn.Linear(200, 100), Tensor.leakyrelu
+      Linear(773, 600), Tensor.leakyrelu,
+      Linear(600, 400), Tensor.leakyrelu,
+      Linear(400, 200), Tensor.leakyrelu,
+      Linear(200, 100), Tensor.leakyrelu
     ]
     self.decode_layers = [
-      nn.Linear(100, 200), Tensor.leakyrelu,
-      nn.Linear(200, 400), Tensor.leakyrelu,
-      nn.Linear(400, 600), Tensor.leakyrelu,
-      nn.Linear(600, 773), Tensor.sigmoid
+      Linear(100, 200), Tensor.leakyrelu,
+      Linear(200, 400), Tensor.leakyrelu,
+      Linear(400, 600), Tensor.leakyrelu,
+      Linear(600, 773),
     ]
-    # self.encode_layers = [
-    #   nn.Linear(773, 600), nn.BatchNorm(600), Tensor.leakyrelu,
-    #   nn.Linear(600, 400), nn.BatchNorm(400), Tensor.leakyrelu,
-    #   nn.Linear(400, 200), nn.BatchNorm(200), Tensor.leakyrelu,
-    #   nn.Linear(200, 100), nn.BatchNorm(100), Tensor.leakyrelu
-    # ]
-    # self.decode_layers = [
-    #   nn.Linear(100, 200), nn.BatchNorm(200), Tensor.leakyrelu,
-    #   nn.Linear(200, 400), nn.BatchNorm(400), Tensor.leakyrelu,
-    #   nn.Linear(400, 600), nn.BatchNorm(600), Tensor.leakyrelu,
-    #   nn.Linear(600, 773), nn.BatchNorm(773), Tensor.sigmoid
-    # ]
   def encode(self, x: Tensor):
     return x.sequential(self.encode_layers)
   def decode(self, x: Tensor):
@@ -33,27 +29,21 @@ class Autoencoder():
   def forward(self, x: Tensor):
     return self.decode(self.encode(x))
 
-  # def forward(self, x):
-  #   x = self.encode(x)
-  #   return self.decode(x), x
-
-
 class Siamese():
   def __init__(self):
     self.layers = [
       nn.Linear(200, 400), nn.BatchNorm(400), Tensor.leakyrelu,
       nn.Linear(400, 200), nn.BatchNorm(200), Tensor.leakyrelu,
       nn.Linear(200, 100), nn.BatchNorm(100), Tensor.leakyrelu,
-      nn.Linear(100, 2), nn.BatchNorm(2),
-      lambda x: Tensor.softmax(x, axis=1)
+      nn.Linear(100, 2), lambda x: Tensor.softmax(x, axis=1)
     ]
 
-  def forward(self, x):
+  def forward(self, x:Tensor):
     return x.sequential(self.layers)
 
 
 class DeepChess():
-  def __init__(self, ae, si):
+  def __init__(self, ae:Autoencoder, si:Siamese):
     self.ae = ae
     self.si = si
 
