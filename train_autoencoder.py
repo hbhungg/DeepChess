@@ -23,10 +23,10 @@ if __name__ == "__main__":
   mlflow.set_tracking_uri(TRACKING_URI)
 
   DATASET_NAME = "dataset_100000"
-  EPOCH = 5
-  BATCH_SIZE = 256
-  LR = 1e-3
-  ADAM_ESP = 1e-6
+  EPOCH = 10 
+  BATCH_SIZE = 128
+  LR = 1e-4
+  ADAM_ESP = 1e-8
 
   model = Autoencoder()
   train_ds = Dataloader(BoardDataset(f"./dataset/{DATASET_NAME}.db", True), batch_size=BATCH_SIZE)

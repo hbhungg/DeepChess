@@ -63,7 +63,15 @@ class Dataloader:
 if __name__ == "__main__":
   a = BoardPairDataset("dataset/dataset_100000.db")
   dl = Dataloader(a, 512)
-  for x in dl:
-    print(x)
-    print(x[1].numpy())
-    break
+  from time import perf_counter
+  from tqdm import tqdm
+
+  inner = 0
+  s = perf_counter()
+  for idx, x in enumerate(tqdm(dl, total=10)):
+    x[0].numpy()
+    x[1].numpy()
+    if idx == 10:
+      break
+  e = perf_counter()
+  print(e-s)

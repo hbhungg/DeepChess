@@ -20,8 +20,9 @@ class Autoencoder():
       Linear(100, 200), Tensor.leakyrelu,
       Linear(200, 400), Tensor.leakyrelu,
       Linear(400, 600), Tensor.leakyrelu,
-      Linear(600, 773),
+      Linear(600, 773)
     ]
+
   def encode(self, x: Tensor):
     return x.sequential(self.encode_layers)
   def decode(self, x: Tensor):
@@ -29,27 +30,18 @@ class Autoencoder():
   def forward(self, x: Tensor):
     return self.decode(self.encode(x))
 
-class Siamese():
-  def __init__(self):
+class DeepChess():
+  def __init__(self, ae:Autoencoder):
+    # self.ae = ae
+    # Siamese
     self.layers = [
-      nn.Linear(200, 400), nn.BatchNorm(400), Tensor.leakyrelu,
-      nn.Linear(400, 200), nn.BatchNorm(200), Tensor.leakyrelu,
-      nn.Linear(200, 100), nn.BatchNorm(100), Tensor.leakyrelu,
-      nn.Linear(100, 2), lambda x: Tensor.softmax(x, axis=1)
+      *ae.encode_layers, lambda x: x.reshape(-1, 100*2),
+      Linear(200, 400), nn.BatchNorm(400), Tensor.leakyrelu,
+      Linear(400, 200), nn.BatchNorm(200), Tensor.leakyrelu,
+      Linear(200, 100), nn.BatchNorm(100), Tensor.leakyrelu,
+      Linear(100, 2), lambda x: Tensor.softmax(x, axis=1)
     ]
-
+  def get_parameters(self): return [*self.ae.encode_layers, *self.si]
   def forward(self, x:Tensor):
     return x.sequential(self.layers)
-
-
-class DeepChess():
-  def __init__(self, ae:Autoencoder, si:Siamese):
-    self.ae = ae
-    self.si = si
-
-  def forward(self, x1, x2):
-    x1 = self.ae.encode(x1)
-    x2 = self.ae.encode(x2)
-    x = Tensor.cat(x1, x2, dim=1)
-    return self.si(x)
 
