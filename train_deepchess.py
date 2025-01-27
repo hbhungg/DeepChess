@@ -12,7 +12,7 @@ from pprint import pprint
 
 @TinyJit
 @Tensor.train()
-def train(opt:Optimizer, model:Autoencoder, x:Tensor, y:Tensor):
+def train(opt:Optimizer, model:DeepChess, x:Tensor, y:Tensor):
   opt.zero_grad()
   ret = model.forward(x)
   loss = (ret.binary_crossentropy(y, reduction="mean")).backward()

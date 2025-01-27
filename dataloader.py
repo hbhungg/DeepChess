@@ -52,26 +52,26 @@ class BoardDataset:
         self.data = [x[0] for x in cur.execute(f"SELECT fen FROM boards WHERE id BETWEEN {s} AND {e};").fetchall()]
 
   def __len__(self) -> int: return len(self.data)
-  def __getitem__(self, idx) -> tuple[Tensor, Tensor]:
-    return Tensor.cat(*[get_bitboard(x) for x in self.data[idx]], dim=0)
+  def __getitem__(self, idx) -> list[Tensor] | Tensor:
+    return [get_bitboard(x) for x in self.data[idx]] if isinstance(idx, slice) else get_bitboard(self.data[idx])
 
 class Dataloader:
-  def __init__(self, ds, batch_size): self.ds, self.batch_size = ds, batch_size
-  def __iter__(self): return (self.ds[x:x+self.batch_size] for x in range(0, len(self)*self.batch_size, self.batch_size))
+  def __init__(self, ds, batch_size, shuffle=False): 
+    self.ds, self.batch_size = ds, batch_size
+    self.shuffle = shuffle
+
+  def __iter__(self): 
+    indices = list(range(len(self.ds)))
+    if self.shuffle: random.shuffle(indices)
+    indices = indices[:len(self) * self.batch_size]
+    for i in range(0, len(indices), self.batch_size):
+      batch_indices = indices[i:i+self.batch_size]
+      yield Tensor.cat(*[self.ds[j] for j in batch_indices], dim=0)
   def __len__(self): return len(self.ds)//self.batch_size
 
 if __name__ == "__main__":
-  a = BoardPairDataset("dataset/dataset_100000.db")
-  dl = Dataloader(a, 512)
-  from time import perf_counter
-  from tqdm import tqdm
-
-  inner = 0
-  s = perf_counter()
-  for idx, x in enumerate(tqdm(dl, total=10)):
-    x[0].numpy()
-    x[1].numpy()
-    if idx == 10:
-      break
-  e = perf_counter()
-  print(e-s)
+  a = BoardDataset("dataset/dataset_10000.db")
+  dl = Dataloader(a, 30)
+  for i in dl:
+    print(i.shape)
+    break
