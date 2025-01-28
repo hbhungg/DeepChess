@@ -5,12 +5,10 @@ import json
 import chess
 import time
 
-import torch
 import numpy as np
-from model import Autoencoder
-from model import Siamese
-from model import DeepChess
-from parse_game import get_bitboard
+from model import DeepChess, Autoencoder
+from dataloader import get_bitboard
+from tinygrad import Tensor
 
 app = Flask(__name__, template_folder=".")
 
@@ -27,20 +25,25 @@ def move_coordinates():
 
   if not board.is_game_over():
     # Human move
-    move = chess.Move.from_uci(source+target)
-    if move in board.legal_moves:
-      board.push(move)
-      if not board.is_game_over():
-        # Computer move
-        print("Calculating move...")
-        start = time.time()
-        og_board = board.copy(stack=False)
-        move = alphabeta(board, 4, -100, 100, False, og_board)[1]
-        end = time.time()
+    try:
+      move = chess.Move.from_uci(source+target)
+    except chess.InvalidMoveError:
+      print("INVALID MOVE!!!")
+      response = app.response_class(response=board.fen(), status=200)
+    else:
+      if move in board.legal_moves:
         board.push(move)
-        print("Computer moves {} in {:.2f}s".format(move, end-start))
-        print("\n ---Board--- \n{}\n\nStatus: {}\n".format(board, board.outcome()))
-        response = app.response_class(response=board.fen(), status=200)
+        if not board.is_game_over():
+          # Computer move
+          print("Calculating move...")
+          start = time.time()
+          og_board = board.copy(stack=False)
+          move = alphabeta(board, 2, -100, 100, False, og_board)[1]
+          end = time.time()
+          board.push(move)
+          print("Computer moves {} in {:.2f}s".format(move, end-start))
+          print("\n ---Board--- \n{}\n\nStatus: {}\n".format(board, board.outcome()))
+          response = app.response_class(response=board.fen(), status=200)
     response = app.response_class(response=board.fen(), status=200)
   else:
     print("GAME OVER")
@@ -48,9 +51,11 @@ def move_coordinates():
   return response
 
 def compare_board(board1, board2):
-  bboard1 = torch.from_numpy(np.expand_dims(get_bitboard(board1), axis=0)).type(torch.FloatTensor)
-  bboard2 = torch.from_numpy(np.expand_dims(get_bitboard(board2), axis=0)).type(torch.FloatTensor)
-  return model(bboard1, bboard2)[0]
+  bb1 = get_bitboard(board1.fen())
+  bb2 = get_bitboard(board2.fen())
+  v = Tensor.cat(bb1, bb2) 
+  with Tensor.test():
+    return model.forward(v).tolist()[0]
 
 
 def minimax(board, depth, white, orig_board):
@@ -122,12 +127,11 @@ def new_game():
 
 if __name__ == "__main__":
   board = chess.Board()
-
   ae = Autoencoder()
-  si = Siamese()
-  model = DeepChess(ae, si)
-  c = torch.load("./checkpoints/deepchess/lr_0.001_decay_0.99.pt")
-  model.load_state_dict(c["model_state_dict"])
-  model.eval()
+  model = DeepChess(ae)
+  # LOAD MODEL HERE
+  # pth = ...
+  # state_dict = safe_load(pth)
+  # load_state_dict(autoencoder, state_dict)
   app.run(host="0.0.0.0", port="5001", debug=True)
 
