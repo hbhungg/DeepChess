@@ -69,7 +69,6 @@ class Dataloader:
     self.ds, self.batch_size = ds, batch_size
     self.shuffle = shuffle
 
-  @profile
   def __iter__(self):
     indices = list(range(len(self.ds)))
     if self.shuffle: random.shuffle(indices)
