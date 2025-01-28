@@ -1,34 +1,34 @@
-import queue
 import sqlite3
 import contextlib
-import multiprocessing as mp
-from line_profiler import profile
 import numpy as np
 import chess
 from tinygrad import Tensor, dtypes
 import random
 
-def get_bitboard(fen):
+def get_bitboard(fen:str) -> Tensor:
   board = chess.Board(fen)
   # 8x8 board, each square has 6 state (for each piece), mul by 2 for color, and last 5 for misc data about game state
   SIZE = 8*8*6*2+5
-  bitboard = np.zeros(SIZE)
+  bitboard = np.zeros(SIZE, dtype=np.float32)
+  # bitboard = Tensor.zeros(SIZE, requires_grad=False, dtype=dtypes.float32)
   piece_idx = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
 
   for i in range(64):
     if board.piece_at(i):
       color = int(board.piece_at(i).color) + 1
-      bitboard[(piece_idx[board.piece_at(i).symbol().lower()] + i * 6) * color] = 1
-  bitboard[-1] = int(board.turn)
-  bitboard[-2] = int(board.has_kingside_castling_rights(True))
-  bitboard[-3] = int(board.has_kingside_castling_rights(False))
-  bitboard[-4] = int(board.has_queenside_castling_rights(True))
-  bitboard[-5] = int(board.has_queenside_castling_rights(False))
-
+      bitboard[(piece_idx[board.piece_at(i).symbol().lower()] + i * 6) * color] = 1.0
+  bitboard[-1] = float(board.turn)
+  bitboard[-2] = float(board.has_kingside_castling_rights(True))
+  bitboard[-3] = float(board.has_kingside_castling_rights(False))
+  bitboard[-4] = float(board.has_queenside_castling_rights(True))
+  bitboard[-5] = float(board.has_queenside_castling_rights(False))
   return Tensor(bitboard, requires_grad=False, dtype=dtypes.float32).expand(1, 773)
 
+class Dataset:
+  def collate_fn(self, batch):
+    return Tensor.cat(*[x for x in batch], dim=0)
 
-class BoardPairDataset:
+class BoardPairDataset(Dataset):
   def __init__(self, db, train=True, split=0.8):
     with sqlite3.connect(db) as conn:
       with contextlib.closing(conn.cursor()) as cur:
@@ -38,15 +38,20 @@ class BoardPairDataset:
         self.w = [x[0] for x in cur.execute(f"SELECT fen FROM boards WHERE result = 1 AND id BETWEEN {sw} AND {ew};").fetchall()]
         self.b = [x[0] for x in cur.execute(f"SELECT fen FROM boards WHERE result = 0 AND id BETWEEN {sb} AND {eb};").fetchall()]
 
-  def __len__(self) -> int: return len(self.w)*len(self.b)
-  def __getitem__(self, idx) -> tuple[Tensor, Tensor]:
-    l = (idx.stop - idx.start) if isinstance(idx, slice) else 1
-    rc = [(x, y, 1, 0) if random.choice([True, False]) else (y, x, 0, 1) for x, y in zip(random.sample(self.w, l),random.sample(self.b, l))]
-    b = Tensor.cat(*[Tensor.cat(get_bitboard(x[0]), get_bitboard(x[1])).expand(1, -1, -1) for x in rc])
-    r = Tensor.cat(*[Tensor(x[2:]).expand(1, -1) for x in rc])
+  def __getitem__(self, _) -> tuple[Tensor, Tensor]:
+    x, y = random.choice(self.w), random.choice(self.b)
+    rc = (x, y, 1, 0) if random.choice([True, False]) else (y, x, 0, 1)
+    b = Tensor.cat(get_bitboard(rc[0]), get_bitboard(rc[1])).expand(1, -1, -1)
+    r = Tensor(rc[2:]).expand(1, -1)
     return b, r
 
-class BoardDataset:
+  def collate_fn(self, batch):
+    return Tensor.cat(*[x[0] for x in batch], dim=0), Tensor.cat(*[x[1] for x in batch], dim=0)
+
+  def __len__(self) -> int: return len(self.w)*len(self.b)
+
+
+class BoardDataset(Dataset):
   def __init__(self, db:str, train=True, split=0.8):
     with sqlite3.connect(db) as conn:
       with contextlib.closing(conn.cursor()) as cur:
@@ -54,27 +59,39 @@ class BoardDataset:
         s, e = (0, int(tlen*split)) if train else (int(tlen*split), tlen)
         self.data = [x[0] for x in cur.execute(f"SELECT fen FROM boards WHERE id BETWEEN {s} AND {e};").fetchall()]
 
-  def __len__(self) -> int: return len(self.data)
   def __getitem__(self, idx) -> list[Tensor] | Tensor:
     return [get_bitboard(x) for x in self.data[idx]] if isinstance(idx, slice) else get_bitboard(self.data[idx])
 
+  def __len__(self) -> int: return len(self.data)
+
 class Dataloader:
-  def __init__(self, ds, batch_size, shuffle=False): 
+  def __init__(self, ds:Dataset, batch_size:int, shuffle=False): 
     self.ds, self.batch_size = ds, batch_size
     self.shuffle = shuffle
 
-  def __iter__(self): 
+  @profile
+  def __iter__(self):
     indices = list(range(len(self.ds)))
     if self.shuffle: random.shuffle(indices)
     indices = indices[:len(self) * self.batch_size]
     for i in range(0, len(indices), self.batch_size):
       batch_indices = indices[i:i+self.batch_size]
-      yield Tensor.cat(*[self.ds[j] for j in batch_indices], dim=0)
+      batch = [self.ds[j] for j in batch_indices] 
+      yield self.ds.collate_fn(batch)
   def __len__(self): return len(self.ds)//self.batch_size
 
 if __name__ == "__main__":
-  a = BoardDataset("dataset/dataset_10000.db")
-  dl = Dataloader(a, 30)
-  for i in dl:
-    print(i.shape)
-    break
+  a = BoardPairDataset("dataset/dataset_100000.db")
+  # b = BoardDataset("dataset/dataset_100000.db")
+  dl1 = Dataloader(a, 100)
+  # dl2 = Dataloader(b, 100)
+
+  for idx, i in enumerate(dl1):
+    print(i)
+    if idx == 10:
+      break
+
+  # for idx, i in enumerate(dl2):
+  #   print(i)
+  #   if idx == 10:
+  #     break
