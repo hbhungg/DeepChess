@@ -19,18 +19,20 @@ def train(opt:Optimizer, model:Autoencoder, x:Tensor):
   return loss
 
 if __name__ == "__main__":
-  TRACKING_URI="http://0.0.0.0:8000"
+  # TRACKING_URI="http://mlflow.lab.home"
+  TRACKING_URI="http://localhost:5000"
   mlflow.set_tracking_uri(TRACKING_URI)
+  mlflow.set_experiment("/deepchess-autoencoder")
 
   DATASET_NAME = "dataset_100000"
-  EPOCH = 10 
-  BATCH_SIZE = 128
-  LR = 1e-4
+  EPOCH = 10
+  BATCH_SIZE = 256
+  LR = 1e-3
   ADAM_ESP = 1e-8
 
   model = Autoencoder()
-  train_ds = Dataloader(BoardDataset(f"./dataset/{DATASET_NAME}.db", True), batch_size=BATCH_SIZE)
-  val_ds = Dataloader(BoardDataset(f"./dataset/{DATASET_NAME}.db", False), batch_size=BATCH_SIZE)
+  train_ds = Dataloader(BoardDataset(f"./dataset/{DATASET_NAME}.db", True), batch_size=BATCH_SIZE, shuffle=True)
+  val_ds = Dataloader(BoardDataset(f"./dataset/{DATASET_NAME}.db", False), batch_size=BATCH_SIZE, shuffle=False)
   opt = nn.optim.Adam(nn.state.get_parameters(model), lr=LR, eps=ADAM_ESP)
 
   with mlflow.start_run():
