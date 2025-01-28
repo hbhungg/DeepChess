@@ -5,7 +5,7 @@ from tinygrad.tensor import Tensor
 from dataloader import BoardDataset, BoardPairDataset, Dataloader
 import mlflow
 from mlflow.data.dataset import Dataset
-from tinygrad.nn.state import safe_save, get_state_dict
+from tinygrad.nn.state import safe_save, get_state_dict, safe_load, load_state_dict
 from tinygrad.nn.optim import Optimizer
 from tqdm import tqdm
 from pprint import pprint
@@ -32,8 +32,14 @@ if __name__ == "__main__":
   ADAM_ESP = 1e-8
   TRAINING_STEP = 100
   VAL_STEP = 10
+  AUTOENCODER_SFT_PATH = "mlflow-artifacts:/2/cf194202923943d1b671558bc9e80949/artifacts/cf194202923943d1b671558bc9e80949.sft"
 
+  # Load pre-train autoencoder
   autoencoder = Autoencoder()
+  apth = mlflow.artifacts.download_artifacts(artifact_path=AUTOENCODER_SFT_PATH)
+  state_dict = safe_load(apth)
+  load_state_dict(autoencoder, state_dict)
+
   model = DeepChess(autoencoder)
   train_ds = Dataloader(BoardPairDataset(f"dataset/{DATASET_NAME}.db", True), BATCH_SIZE)
   val_ds = Dataloader(BoardPairDataset(f"dataset/{DATASET_NAME}.db", False, split=0.8), BATCH_SIZE)
@@ -62,7 +68,7 @@ if __name__ == "__main__":
         ret = model.forward(X)
         loss = (ret.binary_crossentropy_logits(y, reduction="mean")).numpy()
         running_loss += loss
-        if idx == 10:
+        if idx == VAL_STEP:
           break
       val_mean_loss = running_loss/VAL_STEP
       print(f"Epoch: {epoch} - Val Loss: {val_mean_loss}")
