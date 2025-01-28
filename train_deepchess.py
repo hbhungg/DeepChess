@@ -25,9 +25,11 @@ if __name__ == "__main__":
   mlflow.set_tracking_uri(TRACKING_URI)
   mlflow.set_experiment("/deepchess-full")
 
-  DATASET_NAME = "dataset_100000"
+  DATASET_NAME = "dataset_10000"
   EPOCH = 1
-  BATCH_SIZE = 512
+  # Set larger would cause recursion depth limit error
+  # Possible bug?
+  BATCH_SIZE = 256
   LR = 1e-3
   ADAM_ESP = 1e-8
   TRAINING_STEP = 100
@@ -36,7 +38,7 @@ if __name__ == "__main__":
 
   # Load pre-train autoencoder
   autoencoder = Autoencoder()
-  apth = mlflow.artifacts.download_artifacts(artifact_path=AUTOENCODER_SFT_PATH)
+  apth = mlflow.artifacts.download_artifacts(artifact_uri=AUTOENCODER_SFT_PATH)
   state_dict = safe_load(apth)
   load_state_dict(autoencoder, state_dict)
 
