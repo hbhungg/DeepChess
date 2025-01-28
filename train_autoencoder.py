@@ -41,22 +41,24 @@ if __name__ == "__main__":
 
     # Train loop
     for epoch in range(EPOCH):
-      for idx, x in enumerate(tbar:=tqdm(train_ds, total=len(train_ds))):
-        loss = train(opt, model, x).item()
-        assert math.isnan(loss) is False
-        if idx % 3 == 0:
-          mlflow.log_metric(key="train_loss", value=loss, step=epoch*len(train_ds)+idx)
-          tbar.set_description(f"Epoch: {epoch} - Loss: {loss}")
+      with Tensor.train():
+        for idx, x in enumerate(tbar:=tqdm(train_ds, total=len(train_ds))):
+          loss = train(opt, model, x).item()
+          assert math.isnan(loss) is False
+          if idx % 3 == 0:
+            mlflow.log_metric(key="train_loss", value=loss, step=epoch*len(train_ds)+idx)
+            tbar.set_description(f"Epoch: {epoch} - Loss: {loss}")
 
       # Validation loop
-      running_loss = 0
-      for x in tqdm(val_ds, total=len(val_ds)):
-        y = model.forward(x)
-        loss = (y.binary_crossentropy_logits(x, reduction="mean")).numpy()
-        running_loss += loss
-      val_mean_loss = running_loss/len(val_ds)
-      print(f"Epoch: {epoch} - Val Loss: {val_mean_loss}")
-      mlflow.log_metric(key="val_loss", value=val_mean_loss, step=epoch)
+      with Tensor.test():
+        running_loss = 0
+        for x in tqdm(val_ds, total=len(val_ds)):
+          y = model.forward(x)
+          loss = (y.binary_crossentropy_logits(x, reduction="mean")).numpy()
+          running_loss += loss
+        val_mean_loss = running_loss/len(val_ds)
+        print(f"Epoch: {epoch} - Val Loss: {val_mean_loss}")
+        mlflow.log_metric(key="val_loss", value=val_mean_loss, step=epoch)
 
     state_dict = get_state_dict(model)
     PATH = f"/tmp/{run.info.run_id}.sft"
