@@ -8,7 +8,10 @@ import time
 import numpy as np
 from model import DeepChess, Autoencoder
 from dataloader import get_bitboard
-from tinygrad import Tensor
+from tinygrad import TinyJit
+from tinygrad.tensor import Tensor
+from tinygrad.nn.state import safe_save, get_state_dict, safe_load, load_state_dict
+import mlflow
 
 app = Flask(__name__, template_folder=".")
 
@@ -38,7 +41,7 @@ def move_coordinates():
           print("Calculating move...")
           start = time.time()
           og_board = board.copy(stack=False)
-          move = alphabeta(board, 2, -100, 100, False, og_board)[1]
+          move = alphabeta(board, 4, -100, 100, False, og_board)[1]
           end = time.time()
           board.push(move)
           print("Computer moves {} in {:.2f}s".format(move, end-start))
@@ -50,6 +53,7 @@ def move_coordinates():
     response = app.response_class(response="game over", status=200)
   return response
 
+@TinyJit
 def compare_board(board1, board2):
   bb1 = get_bitboard(board1.fen())
   bb2 = get_bitboard(board2.fen())
@@ -130,8 +134,10 @@ if __name__ == "__main__":
   ae = Autoencoder()
   model = DeepChess(ae)
   # LOAD MODEL HERE
-  # pth = ...
-  # state_dict = safe_load(pth)
-  # load_state_dict(autoencoder, state_dict)
+  TRACKING_URI="http://localhost:5000"
+  mlflow.set_tracking_uri(TRACKING_URI)
+  pth = mlflow.artifacts.download_artifacts(artifact_uri="mlflow-artifacts:/3/3d7ef710d9f94ae6a9bbd1bbd2126fa3/artifacts/3d7ef710d9f94ae6a9bbd1bbd2126fa3.sft")
+  state_dict = safe_load(pth)
+  load_state_dict(model, state_dict)
   app.run(host="0.0.0.0", port="5001", debug=True)
 
