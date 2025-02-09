@@ -5,7 +5,8 @@ import chess
 from tinygrad import Tensor, dtypes
 import random
 
-def get_bitboard(fen:str) -> Tensor:
+# def get_bitboard(fen:str) -> Tensor:
+def get_bitboard(fen:str):
   board = chess.Board(fen)
   # 8x8 board, each square has 6 state (for each piece), mul by 2 for color, and last 5 for misc data about game state
   SIZE = 8*8*6*2+5
@@ -22,7 +23,8 @@ def get_bitboard(fen:str) -> Tensor:
   bitboard[-3] = float(board.has_kingside_castling_rights(False))
   bitboard[-4] = float(board.has_queenside_castling_rights(True))
   bitboard[-5] = float(board.has_queenside_castling_rights(False))
-  return Tensor(bitboard, requires_grad=False, dtype=dtypes.float32).expand(1, 773)
+  return bitboard
+  # return Tensor(bitboard, requires_grad=False, dtype=dtypes.float32).expand(1, 773)
 
 class Dataset:
   def collate_fn(self, batch):

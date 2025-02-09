@@ -1,8 +1,14 @@
+import contextlib
+from io import BytesIO
 import random
+import struct
 
 from tqdm import tqdm
 import chess.pgn
 import numpy as np
+import lmdb
+
+from dataloader import get_bitboard
 
 
 def read_games(pgn_file, con, num_games: int = 100, max_board_per_game=5):
@@ -44,7 +50,8 @@ if __name__ == "__main__":
   import sqlite3
 
   num_games = 100_000
-  con = sqlite3.connect(f"dataset/dataset_{num_games}.db")
+  mdb = f"dataset/dataset_{num_games}.db"
+  con = sqlite3.connect(mdb)
   cur = con.cursor()
   cur.execute("""CREATE TABLE IF NOT EXISTS boards (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,3 +62,14 @@ if __name__ == "__main__":
 
   read_games("dataset/CCRL-4040.[1301281].pgn", con, num_games, 10)
   con.close()
+
+  with lmdb.open(f"{mdb}.lmdb", map_size=2*1024**3) as env:
+    with sqlite3.connect(mdb) as conn:
+      with contextlib.closing(conn.cursor()) as cur:
+        w = cur.execute(f"SELECT id, fen FROM boards;").fetchall()
+    with env.begin(write=True) as txn:
+      for idx, fen in tqdm(w):
+        buffer = BytesIO()
+        np.save(buffer, get_bitboard(fen), allow_pickle=False)
+        serialized_array = buffer.getvalue()
+        txn.put(struct.pack(">I", idx), serialized_array)
