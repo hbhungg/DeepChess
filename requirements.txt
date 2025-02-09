@@ -1,2 +1,6 @@
 pytest
 git+https://github.com/tinygrad/tinygrad
+flask
+chess
+numpy
+mlflow
