@@ -2,11 +2,11 @@ import sqlite3
 import contextlib
 import numpy as np
 import chess
-from tinygrad import Tensor, dtypes
+from tinygrad import Tensor, dtypes, TinyJit
 import random
 
-# def get_bitboard(fen:str) -> Tensor:
-def get_bitboard(fen:str):
+@TinyJit
+def get_bitboard(fen:str) -> Tensor:
   board = chess.Board(fen)
   # 8x8 board, each square has 6 state (for each piece), mul by 2 for color, and last 5 for misc data about game state
   SIZE = 8*8*6*2+5
@@ -15,16 +15,16 @@ def get_bitboard(fen:str):
   piece_idx = {'p': 0, 'n': 1, 'b': 2, 'r': 3, 'q': 4, 'k': 5}
 
   for i in range(64):
-    if board.piece_at(i):
-      color = int(board.piece_at(i).color) + 1
-      bitboard[(piece_idx[board.piece_at(i).symbol().lower()] + i * 6) * color] = 1.0
+    if p:=board.piece_at(i):
+      color = int(p.color) + 1
+      bitboard[(piece_idx[p.symbol().lower()] + i * 6) * color] = 1.0
   bitboard[-1] = float(board.turn)
   bitboard[-2] = float(board.has_kingside_castling_rights(True))
   bitboard[-3] = float(board.has_kingside_castling_rights(False))
   bitboard[-4] = float(board.has_queenside_castling_rights(True))
   bitboard[-5] = float(board.has_queenside_castling_rights(False))
-  return bitboard
-  # return Tensor(bitboard, requires_grad=False, dtype=dtypes.float32).expand(1, 773)
+  # return bitboard
+  return Tensor(bitboard, requires_grad=False, dtype=dtypes.float32).expand(1, 773)
 
 class Dataset:
   def collate_fn(self, batch):
@@ -72,12 +72,8 @@ class Dataloader:
     self.shuffle = shuffle
 
   def __iter__(self):
-    indices = list(range(len(self.ds)))
-    if self.shuffle: random.shuffle(indices)
-    indices = indices[:len(self) * self.batch_size]
-    for i in range(0, len(indices), self.batch_size):
-      batch_indices = indices[i:i+self.batch_size]
-      batch = [self.ds[j] for j in batch_indices] 
+    for i in range(0, len(self.ds), self.batch_size):
+      batch = [self.ds[j] for j in range(i,i+self.batch_size)] 
       yield self.ds.collate_fn(batch)
   def __len__(self): return len(self.ds)//self.batch_size
 
