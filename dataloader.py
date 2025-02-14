@@ -3,14 +3,15 @@ import contextlib
 import numpy as np
 import chess
 from tinygrad import Tensor, dtypes
-from tinygrad import TinyJit
+from tinygrad.helpers import prod
 import random
 from line_profiler import profile
 import time
 
 # @TinyJit
 @profile
-def get_bitboard(fen:str) -> Tensor:
+# def get_bitboard(fen:str) -> Tensor:
+def get_bitboard(fen:str) -> np.ndarray:
   board = chess.Board(fen)
   # 8x8 board, each square has 6 state (for each piece), mul by 2 for color, and last 5 for misc data about game state
   SIZE = 8*8*6*2+5
@@ -28,7 +29,8 @@ def get_bitboard(fen:str) -> Tensor:
     float(board.has_kingside_castling_rights(True)),
     float(board.turn)
   ]
-  return Tensor(bitboard, requires_grad=False, dtype=dtypes.float32).expand(1, 773)
+  return bitboard
+  # return Tensor(bitboard, requires_grad=False, dtype=dtypes.float32, device='CPU').expand(1, 773)
 
 class Dataset:
   def collate_fn(self, batch):
@@ -47,11 +49,19 @@ class BoardPairDataset(Dataset):
   @profile
   def __getitem__(self, _) -> tuple[Tensor, Tensor]:
     x, y = get_bitboard(random.choice(self.w)), get_bitboard(random.choice(self.b))
-    b, r = (Tensor.cat(x, y), Tensor([1, 0])) if random.choice([True, False]) else (Tensor.cat(y, x), Tensor([0, 1]))
+    b, r = Tensor.cat(x, y), Tensor([1, 0]) if random.choice([True, False]) else Tensor.cat(y, x), Tensor([0, 1])
     return b.expand(1, -1, -1), r.expand(1, -1)
+  
+  def getitem(self, _) -> tuple[np.ndarray, np.ndarray]:
+    x, y = get_bitboard(random.choice(self.w)), get_bitboard(random.choice(self.b))
+    b, r = (np.stack([x, y]), np.array([1, 0])) if random.choice([True, False]) else (np.stack([y, x]), np.array([0, 1]))
+    return b, r
 
   def collate_fn(self, batch):
     return Tensor.cat(*[x[0] for x in batch], dim=0), Tensor.cat(*[x[1] for x in batch], dim=0)
+  
+  def collate_fn_np(self, batch):
+    return np.stack([x[0] for x in batch]), np.stack([x[1] for x in batch])
 
   def __len__(self) -> int: return len(self.w)*len(self.b)
 
@@ -70,6 +80,7 @@ class BoardDataset(Dataset):
   def __len__(self) -> int: return len(self.data)
 
 import multiprocessing
+from multiprocessing import shared_memory
 
 class Dataloader:
   def __init__(self, ds:Dataset, batch_size:int, shuffle=False): 
@@ -78,39 +89,59 @@ class Dataloader:
     self.q = multiprocessing.Queue(maxsize=10)
 
   @staticmethod
-  def worker(q: multiprocessing.Queue, ds:Dataset, batch_size:int):
+  def worker(q: multiprocessing.Queue, ds:Dataset, batch_size:int, X:Tensor, y:Tensor):
     for i in range(0, len(ds), batch_size):
-      batch = [ds[j] for j in range(i, i+batch_size)]
-      q.put(ds.collate_fn(batch))
+      batch = [ds.getitem(j) for j in range(i, i+batch_size)]
+      b, r = ds.collate_fn_np(batch) 
+      X[i].contiguous().realize().lazydata.base.realized.as_buffer(force_zero_copy=True)[:] = b.tobytes()
+      y[i].contiguous().realize().lazydata.base.realized.as_buffer(force_zero_copy=True)[:] = r.tobytes()
+      q.put(i)
 
-  def start(self):
-    p = multiprocessing.Process(target=self.worker, args=(self.q, self.ds, self.batch_size))
-    p.start()
 
   @profile
   def __iter__(self):
+    import os
+    if os.path.exists("/dev/shm/resnet_X"): os.unlink("/dev/shm/resnet_X")
+    xsz = (self.batch_size, 2, 773)
+    ysz = (self.batch_size, 2)
+    xshm = shared_memory.SharedMemory(name="X", create=True, size=prod(xsz))
+    yshm = shared_memory.SharedMemory(name="y", create=True, size=prod(ysz))
+    X = Tensor.empty(*xsz, dtype=dtypes.float32, device=f"disk:/dev/shm/X")
+    y = Tensor.empty(*ysz, dtype=dtypes.float32, device=f"disk:/dev/shm/y")
+    p = multiprocessing.Process(target=self.worker, args=(self.q, self.ds, self.batch_size, X, y))
+    p.daemon = True
+    p.start()
     for i in range(0, len(self.ds), self.batch_size):
-      yield self.q.get()
+      try:
+        idx = self.q.get()
+        yield X[idx], y[idx]
+      finally:
+        xshm.close()
+        yshm.close()
+        try:
+          xshm.unlink()
+          yshm.unlink()
+        except: pass
   def __len__(self): return len(self.ds)//self.batch_size
 
 if __name__ == "__main__":
   a = BoardPairDataset("dataset/dataset_100000.db")
-  # b = BoardDataset("dataset/dataset_100000.db")
+  b = BoardDataset("dataset/dataset_100000.db")
   dl1 = Dataloader(a, 256)
   # dl1 = Dataloader(a, 256)
-  dl1.start()
   dl1 = iter(dl1)
   # dl2 = iter(Dataloader(b, 100))
 
 
-  @profile
+  # @profile
   def k():
     idx = 0
     while True:
       i, v = next(dl1)
-      print(i.realize(), v.realize())
+      # print(i.realize(), v.realize())
+      print(i.shape, v.shape)
       time.sleep(0.5)
-      if idx == 10:
+      if idx == 1:
         break
       idx += 1
 
